@@ -1,0 +1,43 @@
+test_inv:
+  vars:
+    ansible_user: ubuntu
+    ansible_ssh_pass: password
+    users: test_users
+    admins: global_admins
+    usergroups: test_groups
+    zabbix_server: epyc0
+    syslog_server: epyc0
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_host_key_checking: false
+    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+    mailer:
+      server: smtp.gmail.com
+      user: email@gmail.com
+      password: aaaa bbbb cccc dddd
+      dest: dest@gmail.com
+  children:
+    workers:
+      hosts:
+        srv-ubuntu-01:
+          ansible_host: 127.0.0.1
+          ansible_port: 2221
+        srv-ubuntu-02:
+          ansible_host: 127.0.0.1
+          ansible_port: 2222
+        srv-ubuntu-03:
+          ansible_host: 127.0.0.1
+          ansible_port: 2223
+        srv-ubuntu-04:
+          ansible_host: 127.0.0.1
+          ansible_port: 2224
+        srv-ubuntu-05:
+          ansible_host: 127.0.0.1
+          ansible_port: 2225
+    
+    temp:
+      hosts:
+        epyc0:
+          ansible_host: 127.0.0.1
+          ansible_port: 2220
+          usergroups: null
+          users: null

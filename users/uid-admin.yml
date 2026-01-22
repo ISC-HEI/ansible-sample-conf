@@ -1,0 +1,7 @@
+uid_admin:
+  - {  id: '1000', name: 'ubuntu', shell: '/bin/bash'    }
+  - {  id: '2000', name: 'pim',    shell: '/bin/bash'    }
+  - {  id: '1001', name: 'pmudry', shell: '/usr/bin/zsh' }
+
+gid_admin:
+  - { id: '141', name: 'testgroup'}

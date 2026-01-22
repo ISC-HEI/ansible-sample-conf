@@ -1,0 +1,11 @@
+global_admins:
+  - ubuntu
+  - pmudry
+  - pim
+
+test_users:
+  - titi
+  - tutu
+
+test_groups:
+  - testgroup
