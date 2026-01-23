@@ -40,23 +40,23 @@ git clone https://github.com/ISC-HEI/ansible-playbooks.git
 
 ## Usage
 
-The main script is `generate_lab.sh`.
+The main script is `test_lab.sh`.
 
 ### Syntax
 ```bash
-./generate_lab.sh -i <inventory_path> [-t <playbook_path>]
+./test_lab.sh -i <inventory_path> [-t <playbook_path>]
 ```
 
 ### Examples
 **1. Run a connectivity test (Ping)**: Use this to verify that all containers are up and SSH is reachable.
 ```bash
-./generate_lab.sh -i inventory/inventory.yml
+./test_lab.sh -i inventory/inventory.yml
 ```
 > **Note:** [inventory.yml](inventory/inventory.yml) is an example of configuration using a password instead of a public key, along with other configuration examples, you can add mailer too.
 
 **2. Execute a specific playbook**: Use this to run your full configuration logic against the temporary lab.
 ```bash
-./generate_lab.sh -i inventory/inventory.yml -t ./path/to/test_today.yml
+./test_lab.sh -i inventory/inventory.yml -t ./path/to/test_today.yml
 ```
 
 ## Important Limitations
@@ -64,7 +64,6 @@ The main script is `generate_lab.sh`.
 Since the containers share the host's **Kernel**, please keep the following in mind:
 * **Missing System Packages**: Docker images are minimal. If your playbooks fail on tasks like setting timezones or managing specific services, you may need to install additional packages (e.g., `tzdata`, `systemd` (already in)) in the [Dockerfile](build/Dockerfile).
 * **Kernel Modules**: Tasks using `modprobe` or trying to modify kernel parameters will likely fail (Normally, this will fail, but it will continue because it will be ignored.).
-* **Systemd**: The script runs containers in `--privileged` mode and mounts `/sys/fs/cgroup` to allow services to run correctly inside the containers.
 * **Network/Storage**: Advanced low-level operations (like partitioning disks or complex firewalling) may behave differently than on a physical bare-metal server.
 
 ---
