@@ -1,0 +1,94 @@
+services:
+  srv-ubuntu-01:
+    build:
+      context: ./build
+      dockerfile: Dockerfile.Ubuntu_24.04
+    container_name: srv-ubuntu-01
+    command: /usr/sbin/sshd -D
+    ports:
+    - '2221:22'
+    networks:
+    - lab-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+  srv-ubuntu-02:
+    build:
+      context: ./build
+      dockerfile: Dockerfile.Ubuntu_24.04
+    container_name: srv-ubuntu-02
+    command: /usr/sbin/sshd -D
+    ports:
+    - '2222:22'
+    networks:
+    - lab-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+  srv-ubuntu-03:
+    build:
+      context: ./build
+      dockerfile: Dockerfile.Ubuntu_24.04
+    container_name: srv-ubuntu-03
+    command: /usr/sbin/sshd -D
+    ports:
+    - '2223:22'
+    networks:
+    - lab-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+  srv-ubuntu-04:
+    build:
+      context: ./build
+      dockerfile: Dockerfile.Ubuntu_24.04
+    container_name: srv-ubuntu-04
+    command: /usr/sbin/sshd -D
+    ports:
+    - '2224:22'
+    networks:
+    - lab-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+  srv-ubuntu-05:
+    build:
+      context: ./build
+      dockerfile: Dockerfile.Ubuntu_24.04
+    container_name: srv-ubuntu-05
+    command: /usr/sbin/sshd -D
+    ports:
+    - '2225:22'
+    networks:
+    - lab-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+  epyc0:
+    build:
+      context: ./build
+      dockerfile: Dockerfile.Ubuntu_24.04
+    container_name: epyc0
+    command: /usr/sbin/sshd -D
+    ports:
+    - '2220:22'
+    networks:
+    - lab-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+networks:
+  lab-net:
+    driver: bridge

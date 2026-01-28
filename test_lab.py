@@ -41,6 +41,8 @@ def generate_docker_compose(data):
     """Generate docker-compose.yml dictionary from inventory data."""
     docker_compose = {"services": {}}
     root = data.get("test_inv", data)
+    vars = root.get("vars", {})
+    dockerfileVersion = vars.get("dockerfile")
     children = root.get("children", {})
 
     for group in children.values():
@@ -50,7 +52,10 @@ def generate_docker_compose(data):
                 continue
 
             docker_compose["services"][host] = {
-                "build": "./build",
+                "build": {
+                    "context": "./build",
+                    "dockerfile": f"Dockerfile.{dockerfileVersion}",
+                },
                 "container_name": host,
                 "command": "/usr/sbin/sshd -D",
                 "ports": [f"{port}:22"],
