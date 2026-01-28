@@ -38,4 +38,4 @@ RUN useradd -m -s /bin/bash ubuntu && \
 
 EXPOSE 22
 
-CMD ["/usr/sbin/sshd", "-D"]
+CMD ["/sbin/init"]
