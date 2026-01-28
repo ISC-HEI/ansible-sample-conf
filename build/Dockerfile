@@ -33,9 +33,8 @@ RUN mkdir -p /etc/update-motd.d/ && \
 
 RUN useradd -m -s /bin/bash ubuntu && \
     echo 'ubuntu:password' | chpasswd && \
-    adduser ubuntu sudo
-
-RUN echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    adduser ubuntu sudo && \
+    echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 EXPOSE 22
 
