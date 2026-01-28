@@ -40,21 +40,38 @@ git clone https://github.com/ISC-HEI/ansible-playbooks.git
 
 The main script is `test_lab.py`.
 
-### Syntax
+### Start
+First, you need to start the test lab.
 ```bash
-python3 ./test_lab.py -i <inventory_path> [-t <playbook_path>]
+python3 ./test_lab.py start -i <inventory_path>
+```
+
+### Run
+For running test, the `--inventory` args isn't required, it will take the one use in the latest start.
+```bash
+python3 ./test_lab.py run [-t <test_file_path>] [-i <inventory_path>]
+```
+
+### Stop
+Finnaly you can stop your docker.
+```bash
+python3 ./test_lab.py stop
 ```
 
 ### Examples
 **1. Run a connectivity test (Ping)**: Use this to verify that all containers are up and SSH is reachable.
 ```bash
-python3 ./test_lab.py -i inventory/inventory.yml
+python3 ./test_lab.py start -i inventory/inventory.yml
+python3 ./test_lab.py run
+python3 ./test_lab.py stop
 ```
 > **Note:** [inventory.yml](inventory/inventory.yml) is an example of configuration using a password instead of a public key, along with other configuration examples, you can add mailer too.
 
 **2. Execute a specific playbook**: Use this to run your full configuration logic against the temporary lab.
 ```bash
-python3 ./test_lab.py -i inventory/inventory.yml -t ./path/to/test_today.yml
+python3 ./test_lab.py start -i inventory/inventory.yml
+python3 ./test_lab.py run -t path/to/playbook.yml
+python3 ./test_lab.py stop
 ```
 
 ## Important Limitations

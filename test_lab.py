@@ -5,6 +5,9 @@ import time
 import os
 import argparse
 
+MEMO_FILE = ".lab_inventory"
+
+# Helpers
 def load_inventory(path_or_file):
     """Load inventory from a YAML file or directory of YAML files, merging hosts."""
     data = {}
@@ -33,7 +36,6 @@ def load_inventory(path_or_file):
         with open(path_or_file, "r") as f:
             data = yaml.safe_load(f)
     return data
-
 
 def generate_docker_compose(data):
     """Generate docker-compose.yml dictionary from inventory data."""
@@ -83,18 +85,25 @@ def fix_hosts():
             stderr=subprocess.DEVNULL,
         )
 
-def main():
-    parser = argparse.ArgumentParser(description="Run virtual lab with Docker + Ansible")
-    parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
-    parser.add_argument("-t", "--test", help="Optional playbook path")
-    args = parser.parse_args()
+def save_inventory_path(path):
+    with open(MEMO_FILE, "w") as f:
+        f.write(path)
 
-    INVENTORY = args.inventory
-    TEST_PATH = args.test
+def load_saved_inventory():
+    if os.path.exists(MEMO_FILE):
+        with open(MEMO_FILE, "r") as f:
+            return f.read().strip()
+    return None
+
+# Functions link to command
+
+def start(inventory):
+    print(f"Using inventory: {inventory}")
+    save_inventory_path(inventory)
 
     print("Loading inventory...")
     try:
-        data = load_inventory(INVENTORY)
+        data = load_inventory(inventory)
     except Exception as e:
         print(f"Error reading inventory: {e}")
         sys.exit(1)
@@ -118,29 +127,67 @@ def main():
         os.remove("docker-compose.yml")
         sys.exit(1)
 
-    print("Waiting for SSH stabilization (5s)...")
-    time.sleep(5)
-
     print("Fixing /etc/hosts in containers...")
     fix_hosts()
 
-    if TEST_PATH:
-        print(f"Running playbook {TEST_PATH}...")
-        subprocess.run(
-            ["ansible-playbook", "-i", INVENTORY, TEST_PATH, "-e", "h=all"]
-        )
-    else:
-        print("Pinging all hosts with Ansible...")
-        subprocess.run(["ansible", "all", "-m", "ping", "-i", INVENTORY])
+def run(inventory, test_path):
+    if not inventory:
+        inventory = load_saved_inventory()
+        if not inventory:
+            print("No inventory specified and no saved inventory found.")
+            sys.exit(1)
 
+    if test_path:
+        print(f"Running playbook {test_path} on inventory {inventory}...")
+        subprocess.run(["ansible-playbook", "-i", inventory, test_path, "-e", "h=all"])
+    else:
+        print(f"Pinging all hosts in inventory {inventory}...")
+        subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
+
+def stop():
     print("Cleaning up...")
     subprocess.run(
         ["docker", "compose", "down", "-v", "--rmi", "local"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    os.remove("docker-compose.yml")
+    if (os.path.exists("docker-compose.yml")):
+        os.remove("docker-compose.yml")
+    if (os.path.exists(MEMO_FILE)):
+        os.remove(MEMO_FILE)
     print("Done.")
+
+# Main function
+
+def main():
+    parser = argparse.ArgumentParser(description="Manage virtual lab with Docker + Ansible")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # START
+    start_parser = subparsers.add_parser("start", help="Start the virtual lab")
+    start_parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
+
+    # RUN
+    run_parser = subparsers.add_parser("run", help="Run playbook or ping hosts")
+    run_parser.add_argument("-t", "--test", help="Optional playbook path")
+    run_parser.add_argument("-i", "--inventory", help="Inventory YAML file or directory path")
+
+    # STOP
+    subparsers.add_parser("stop", help="Stop the virtual lab")
+
+    args = parser.parse_args()
+
+    global INVENTORY, TEST_PATH
+    INVENTORY = getattr(args, "inventory", None)
+    TEST_PATH = getattr(args, "test", None)
+
+    if args.command == "start":
+        start(INVENTORY)
+    elif args.command == "run":
+        run(INVENTORY, TEST_PATH)
+    elif args.command == "stop":
+        stop()
+
 
 if __name__ == "__main__":
     main()
