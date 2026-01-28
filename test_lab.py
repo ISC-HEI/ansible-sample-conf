@@ -149,10 +149,13 @@ def run(inventory, test_path):
         print(f"Pinging all hosts in inventory {inventory}...")
         subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
 
-def stop():
+def stop(rmi):
+    command = ["docker", "compose", "down"]
+    if rmi:
+        command.extend(["-v", "--rmi", "local"])
     print("Cleaning up...")
     subprocess.run(
-        ["docker", "compose", "down", "-v", "--rmi", "local"],
+        command,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -178,7 +181,8 @@ def main():
     run_parser.add_argument("-i", "--inventory", help="Inventory YAML file or directory path")
 
     # STOP
-    subparsers.add_parser("stop", help="Stop the virtual lab")
+    stop_parser = subparsers.add_parser("stop", help="Stop the virtual lab")
+    stop_parser.add_argument("-r", "--rmi", help="Remove docker images", action="store_true")
 
     args = parser.parse_args()
 
@@ -191,7 +195,7 @@ def main():
     elif args.command == "run":
         run(INVENTORY, TEST_PATH)
     elif args.command == "stop":
-        stop()
+        stop(args.rmi)
 
 
 if __name__ == "__main__":
