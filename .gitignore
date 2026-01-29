@@ -1,3 +1,6 @@
 /temp
 
 docker-compose.yml
+
+.venv
+__pycache__/

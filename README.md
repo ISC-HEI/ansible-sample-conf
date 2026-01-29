@@ -48,6 +48,8 @@ https://github.com/ISC-HEI/ansible-playbooks
 - Clean lifecycle  
   Start, test, and destroy labs cleanly.
 
+- Menu for easy utilisation.
+
 
 ## Architecture
 
@@ -83,10 +85,30 @@ cd ..
 git clone https://github.com/ISC-HEI/ansible-playbooks.git
 ```
 
+Activate a Python virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-The main entry point is:
+### Menu
+
+This repo provied a menu for easy utilisation, start it like that:
+```bash
+python3 lab_menu.py
+```
+
+### CLI Commands
+The entry point for CLI commands is:
 
 ```bash
 python3 test_lab.py
