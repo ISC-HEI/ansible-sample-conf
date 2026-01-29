@@ -5,6 +5,7 @@ import os
 import argparse
 import json
 import shutil
+import socket
 
 TEMP_DIRECTORY = "./temp"
 MEMO_FILE = f"{TEMP_DIRECTORY}/.lab_session.json"
@@ -54,7 +55,8 @@ def generate_docker_compose(data, sessionId):
             port = vars.get("ansible_port")
             if not port:
                 continue
-            host_port = port + session_port_offset(sessionId)
+            host_port = session_port_offset(port, sessionId)
+
 
 
             docker_compose["services"][host] = {
@@ -100,6 +102,13 @@ def fix_hosts(sessionId):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+
+def is_port_open(port):
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1):
+            return True
+    except:
+        return False
 
 # session
 
@@ -180,7 +189,7 @@ def generate_session_inventory(data, sessionId, output_path):
             session_root["children"][group_name]["hosts"][host] = {
                 **vars,
                 "ansible_host": "127.0.0.1",
-                "ansible_port": port + session_port_offset(sessionId),
+                "ansible_port": session_port_offset(port, sessionId),
             }
 
     session_inventory = {root_name: session_root} if root_name else session_root
@@ -188,9 +197,11 @@ def generate_session_inventory(data, sessionId, output_path):
     with open(output_path, "w") as f:
         yaml.dump(session_inventory, f, sort_keys=False)
 
-
-def session_port_offset(sessionId):
-    return (int(sessionId[1:]) - 1) * 100
+def session_port_offset(base_port, sessionId):
+    port = base_port + (int(sessionId[1:]) - 1) * 100
+    while is_port_open(port):
+        port += 10
+    return port
 
 # Functions link to command
 
