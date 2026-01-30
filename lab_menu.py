@@ -39,35 +39,30 @@ def select_session_menu():
 
     return options[index].split()[0]
 
-
 def complete_path(text, state):
-    line = readline.get_line_buffer()
-    if not line:
-        line = ''
+    line = readline.get_line_buffer() or ''
 
     glob_pattern = line + '*'
     matches = glob.glob(glob_pattern)
     matches = [m + '/' if os.path.isdir(m) else m for m in matches]
 
-    new_matches = []
-    for m in matches:
-        if '/' in line:
-            last_slash_index = line.rfind('/')
-            prefix = line[:last_slash_index+1]
+    results = []
+
+    if '/' in line:
+        last_slash = line.rfind('/')
+        prefix = line[:last_slash + 1]
+
+        for m in matches:
             if m.startswith(prefix):
-                new_matches.append(m[len(prefix):])
-            else:
-                new_matches.append(m)
-        else:
-            new_matches.append(m)
-
-    matches = sorted(new_matches)
-
-    if state < len(matches):
-        return matches[state]
+                results.append(prefix + m[len(prefix):])
     else:
-        return None
+        results = matches
 
+    results = sorted(results)
+
+    return results[state] if state < len(results) else None
+
+readline.set_completer_delims(" \t\n")
 readline.set_completer(complete_path)
 readline.parse_and_bind("tab: complete")
 
