@@ -9,6 +9,7 @@ import socket
 
 TEMP_DIRECTORY = "./temp"
 MEMO_FILE = f"{TEMP_DIRECTORY}/.lab_session.json"
+BUILD_DIRECTORY = "./build"
 
 os.makedirs(TEMP_DIRECTORY, exist_ok=True)
 
@@ -48,6 +49,7 @@ def generate_docker_compose(data, sessionId):
     root = data.get("test_inv", data)
     vars = root.get("vars", {})
     dockerfileVersion = vars.get("dockerfile")
+    create_docker_images(dockerfileVersion, sessionId)
     children = root.get("children", {})
 
     for group in children.values():
@@ -57,13 +59,8 @@ def generate_docker_compose(data, sessionId):
                 continue
             host_port = session_port_offset(port, sessionId)
 
-
-
             docker_compose["services"][host] = {
-                "build": {
-                    "context": "../build",
-                    "dockerfile": f"Dockerfile.{dockerfileVersion}",
-                },
+                "image": f"{dockerfileVersion.lower()}:latest",
                 "container_name": f"{sessionId}-{host}",
                 "command": "/usr/sbin/sshd -D",
                 "ports": [f"{host_port}:22"],
@@ -110,6 +107,39 @@ def is_port_open(port):
     except:
         return False
 
+# docker images
+
+def create_docker_images(dockerfileversion, sessionId):
+    image_name = dockerfileversion.lower()
+
+    result = subprocess.run(
+        ["docker", "images", "-q", image_name],
+        capture_output=True,
+        text=True
+    )
+    if result.stdout.strip():
+        update_session(sessionId, image=image_name)
+        return
+
+    dockerfile_path = os.path.join(BUILD_DIRECTORY, f"Dockerfile.{dockerfileversion}")
+
+    subprocess.run(
+        ["docker", "build", "-t", image_name, "-f", dockerfile_path, "."],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    update_session(sessionId, image=image_name)
+
+def clear_images():
+    sessions = get_all_sessions() or {}
+    for s, data in sessions.items():
+        image_name = data.get("image")
+        if image_name:
+            print(f"Removing image {image_name}")
+            subprocess.run(["docker", "rmi", "-f", image_name], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+
 # session
 
 def create_session(path):
@@ -129,25 +159,27 @@ def create_session(path):
         next_number = 1
 
     new_session = f"S{next_number:02d}"
-    sessions[new_session] = path
+    sessions[new_session] = {"path": path, "image": None}
 
     with open(MEMO_FILE, "w") as f:
         json.dump(sessions, f)
 
     return new_session
 
-def update_session(sessionId, path):
-    data = {}
-    if os.path.exists(MEMO_FILE):
-        with open(MEMO_FILE, "r") as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = {}
+def update_session(sessionId, path=None, image=None):
+    sessions = get_all_sessions() or {}
 
-    data[sessionId] = path
+    session_data = sessions.get(sessionId, {"path": None, "image": None})
+
+    if path is not None:
+        session_data["path"] = path
+    if image is not None:
+        session_data["image"] = image
+
+    sessions[sessionId] = session_data
+
     with open(MEMO_FILE, "w") as f:
-        json.dump(data, f)
+        json.dump(sessions, f, indent=2)
 
 def get_session(sessionId):
     if os.path.exists(MEMO_FILE):
@@ -273,7 +305,7 @@ def run(inventory, test_path, sessionId):
     if inventory:
         update_session(sessionId, inventory)
     else:
-        inventory = sessions.get(sessionId)
+        inventory = sessions.get(sessionId)["path"]
         if not inventory:
             print("Error: no inventory associated with this session")
             sys.exit(1)
@@ -300,7 +332,7 @@ def stop(rmi):
                 "down"
             ]
             if rmi:
-                command.extend(["-v", "--rmi", "local"])
+                clear_images()
             print(f"Cleaning up session {s}")
             subprocess.run(
                 command,
