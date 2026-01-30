@@ -2,6 +2,8 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 import sys
+import glob
+import readline
 from test_lab import get_all_sessions
 
 LAB_SCRIPT = "test_lab.py"
@@ -9,7 +11,6 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 # Helpers
-
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
@@ -39,6 +40,36 @@ def select_session_menu():
     return options[index].split()[0]
 
 
+def complete_path(text, state):
+    line = readline.get_line_buffer()
+    if not line:
+        line = ''
+
+    glob_pattern = line + '*'
+    matches = glob.glob(glob_pattern)
+    matches = [m + '/' if os.path.isdir(m) else m for m in matches]
+
+    new_matches = []
+    for m in matches:
+        if '/' in line:
+            last_slash_index = line.rfind('/')
+            prefix = line[:last_slash_index+1]
+            if m.startswith(prefix):
+                new_matches.append(m[len(prefix):])
+            else:
+                new_matches.append(m)
+        else:
+            new_matches.append(m)
+
+    matches = sorted(new_matches)
+
+    if state < len(matches):
+        return matches[state]
+    else:
+        return None
+
+readline.set_completer(complete_path)
+readline.parse_and_bind("tab: complete")
 
 # Commands
 
