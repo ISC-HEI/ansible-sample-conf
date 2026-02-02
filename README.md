@@ -104,14 +104,14 @@ pip install -r requirements.txt
 
 This repo provied a menu for easy utilisation, start it like that:
 ```bash
-menu.py
+./menu.py
 ```
 
 ### CLI Commands
 The entry point for CLI commands is:
 
 ```bash
-cluster.py
+./cluster.py
 ```
 
 
@@ -120,7 +120,7 @@ cluster.py
 Create a new isolated cluster session from an Ansible inventory:
 
 ```bash
-cluster.py start -i inventory/inventory.yml
+./cluster.py start -i inventory/inventory.yml
 ```
 
 This will:
@@ -135,19 +135,19 @@ This will:
 Ping all hosts in the active session:
 
 ```bash
-cluster.py run
+./cluster.py run
 ```
 
 Run a specific playbook:
 
 ```bash
-cluster.py run -t path/to/playbook.yml
+./cluster.py run -t path/to/playbook.yml
 ```
 
 If multiple sessions exist, specify one:
 
 ```bash
-cluster.py run -s S02
+./cluster.py run -s S02
 ```
 
 
@@ -156,13 +156,13 @@ cluster.py run -s S02
 Show all active sessions:
 
 ```bash
-cluster.py sessions
+./cluster.py sessions
 ```
 
 Verbose mode:
 
 ```bash
-cluster.py sessions -v
+./cluster.py sessions -v
 ```
 
 
@@ -171,23 +171,23 @@ cluster.py sessions -v
 Stop all running clusters:
 
 ```bash
-cluster.py stop
+./cluster.py stop
 ```
 
 Stop clusters and remove Docker images:
 
 ```bash
-cluster.py stop --rmi
+./cluster.py stop --rmi
 ```
 
 
 ## Example Workflow
 
 ```bash
-cluster.py start -i inventory/inventory.yml
-cluster.py run
-cluster.py run -t playbooks/site.yml
-cluster.py stop
+./cluster.py start -i inventory/inventory.yml
+./cluster.py run
+./cluster.py run -t playbooks/site.yml
+./cluster.py stop
 ```
 
 
