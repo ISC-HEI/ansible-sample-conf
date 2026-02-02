@@ -64,8 +64,10 @@ def generate_docker_compose(data, sessionId):
             docker_compose["services"][host] = {
                 "image": f"{dockerfileVersion.lower()}:latest",
                 "container_name": f"{sessionId}-{host}",
-                "command": "/usr/sbin/sshd -D",
+                "hostname": f"{host}",
+                "extra_hosts": [f"{host}:127.0.0.1"],
                 "ports": [f"{host_port}:22"],
+                "tmpfs": ["/run", "/run/lock"],
                 "networks": [f"{sessionId}-cluster-net"],
                 "deploy": {
                     "resources": {
@@ -76,31 +78,6 @@ def generate_docker_compose(data, sessionId):
 
     docker_compose["networks"] = {f"{sessionId}-cluster-net": {"driver": "bridge"}}
     return docker_compose
-
-def fix_hosts(sessionId):
-    """Fix /etc/hosts in all running containers."""
-    container_ids = subprocess.check_output(
-        [
-            "docker", "compose",
-            "-p", sessionId.lower(),
-            "-f", f"temp/docker-compose-{sessionId}.yml",
-            "ps", "-q"
-        ]
-    ).decode().splitlines()
-
-    for cid in container_ids:
-        cname = subprocess.check_output(
-            ["docker", "inspect", "-f", "{{.Name}}", cid]
-        ).decode().strip().lstrip("/")
-        print(f"  -> Fixing /etc/hosts in {cname}")
-        subprocess.run(
-            [
-                "docker", "exec", "-u", "root", cid, "bash", "-c",
-                "cp /etc/hosts /etc/hosts.bak && umount /etc/hosts && mv /etc/hosts.bak /etc/hosts",
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
 
 def is_port_open(port):
     try:
@@ -114,8 +91,10 @@ def is_port_open(port):
 def create_docker_images(dockerfileversion, sessionId):
     image_name = dockerfileversion.lower()
 
+    print("Generating docker images...")
+
     result = subprocess.run(
-        ["docker", "images", "-q", image_name],
+        ["docker", "build", "-f", image_name],
         capture_output=True,
         text=True
     )
@@ -282,9 +261,6 @@ def start(inventory):
         print("Error starting Docker containers")
         shutil.rmtree("temp")
         sys.exit(1)
-
-    print("Fixing /etc/hosts in containers...")
-    fix_hosts(sessionId)
 
 def run(inventory, test_path, sessionId):
     sessions = get_all_sessions()
