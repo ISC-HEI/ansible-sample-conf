@@ -6,7 +6,7 @@ import os
 import sys
 import glob
 import readline
-from test_lab import get_all_sessions
+from cluster import get_all_sessions
 
 LAB_SCRIPT = "test_lab.py"
 BOLD = "\033[1m"
