@@ -111,7 +111,7 @@ menu.py
 The entry point for CLI commands is:
 
 ```bash
-test_lab.py
+cluster.py
 ```
 
 
@@ -120,7 +120,7 @@ test_lab.py
 Create a new isolated lab session from an Ansible inventory:
 
 ```bash
-test_lab.py start -i inventory/inventory.yml
+cluster.py start -i inventory/inventory.yml
 ```
 
 This will:
@@ -135,19 +135,19 @@ This will:
 Ping all hosts in the active session:
 
 ```bash
-test_lab.py run
+cluster.py run
 ```
 
 Run a specific playbook:
 
 ```bash
-test_lab.py run -t path/to/playbook.yml
+cluster.py run -t path/to/playbook.yml
 ```
 
 If multiple sessions exist, specify one:
 
 ```bash
-test_lab.py run -s S02
+cluster.py run -s S02
 ```
 
 
@@ -156,13 +156,13 @@ test_lab.py run -s S02
 Show all active sessions:
 
 ```bash
-test_lab.py sessions
+cluster.py sessions
 ```
 
 Verbose mode:
 
 ```bash
-test_lab.py sessions -v
+cluster.py sessions -v
 ```
 
 
@@ -171,23 +171,23 @@ test_lab.py sessions -v
 Stop all running labs:
 
 ```bash
-test_lab.py stop
+cluster.py stop
 ```
 
 Stop labs and remove Docker images:
 
 ```bash
-test_lab.py stop --rmi
+cluster.py stop --rmi
 ```
 
 
 ## Example Workflow
 
 ```bash
-test_lab.py start -i inventory/inventory.yml
-test_lab.py run
-test_lab.py run -t playbooks/site.yml
-test_lab.py stop
+cluster.py start -i inventory/inventory.yml
+cluster.py run
+cluster.py run -t playbooks/site.yml
+cluster.py stop
 ```
 
 
