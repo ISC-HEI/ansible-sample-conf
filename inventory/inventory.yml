@@ -5,8 +5,8 @@ test_inv:
     users: test_users
     admins: global_admins
     usergroups: test_groups
-    zabbix_server: epyc0
-    syslog_server: epyc0
+    zabbix_server: srv-ubuntu-main
+    syslog_server: srv-ubuntu-main
     ansible_python_interpreter: /usr/bin/python3
     ansible_host_key_checking: false
     ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
@@ -34,10 +34,10 @@ test_inv:
         srv-ubuntu-05:
           ansible_host: 127.0.0.1
           ansible_port: 2225
-    
+
     temp:
       hosts:
-        epyc0:
+        srv-ubuntu-main:
           ansible_host: 127.0.0.1
           ansible_port: 2220
           usergroups: null
