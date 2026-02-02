@@ -65,7 +65,7 @@ Ansible Inventory
 The following tools are required:
 
 - Docker and Docker Compose
-- Python
+- Python + venv
 - Ansible
 
 
@@ -115,9 +115,9 @@ cluster.py
 ```
 
 
-## Start a Lab
+## Start a cluster
 
-Create a new isolated lab session from an Ansible inventory:
+Create a new isolated cluster session from an Ansible inventory:
 
 ```bash
 cluster.py start -i inventory/inventory.yml
@@ -168,13 +168,13 @@ cluster.py sessions -v
 
 ## Stop and Cleanup
 
-Stop all running labs:
+Stop all running clusters:
 
 ```bash
 cluster.py stop
 ```
 
-Stop labs and remove Docker images:
+Stop clusters and remove Docker images:
 
 ```bash
 cluster.py stop --rmi
@@ -217,7 +217,7 @@ Because Docker containers share the host kernel:
 You can customize the images in:
 
 ```text
-build/Dockerfile.*
+Dockerfiles/Dockerfile.*
 ```
 
 

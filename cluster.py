@@ -10,8 +10,8 @@ import shutil
 import socket
 
 TEMP_DIRECTORY = "./temp"
-MEMO_FILE = f"{TEMP_DIRECTORY}/.lab_session.json"
-BUILD_DIRECTORY = "./build"
+MEMO_FILE = f"{TEMP_DIRECTORY}/.cluster_session.json"
+DOCKERFILES_DIRECTORY = "./Dockerfiles"
 
 os.makedirs(TEMP_DIRECTORY, exist_ok=True)
 
@@ -66,7 +66,7 @@ def generate_docker_compose(data, sessionId):
                 "container_name": f"{sessionId}-{host}",
                 "command": "/usr/sbin/sshd -D",
                 "ports": [f"{host_port}:22"],
-                "networks": [f"{sessionId}-lab-net"],
+                "networks": [f"{sessionId}-cluster-net"],
                 "deploy": {
                     "resources": {
                         "limits": {"cpus": "1.0", "memory": "512M"}
@@ -74,7 +74,7 @@ def generate_docker_compose(data, sessionId):
                 },
             }
 
-    docker_compose["networks"] = {f"{sessionId}-lab-net": {"driver": "bridge"}}
+    docker_compose["networks"] = {f"{sessionId}-cluster-net": {"driver": "bridge"}}
     return docker_compose
 
 def fix_hosts(sessionId):
@@ -123,7 +123,7 @@ def create_docker_images(dockerfileversion, sessionId):
         update_session(sessionId, image=image_name)
         return
 
-    dockerfile_path = os.path.join(BUILD_DIRECTORY, f"Dockerfile.{dockerfileversion}")
+    dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfileversion}")
 
     subprocess.run(
         ["docker", "build", "-t", image_name, "-f", dockerfile_path, "."],
@@ -356,11 +356,11 @@ def sessions(verbose):
 # Main function
 
 def main():
-    parser = argparse.ArgumentParser(description="Manage virtual lab with Docker + Ansible")
+    parser = argparse.ArgumentParser(description="Manage virtual cluster with Docker + Ansible")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # START
-    start_parser = subparsers.add_parser("start", help="Start the virtual lab")
+    start_parser = subparsers.add_parser("start", help="Start the virtual cluster")
     start_parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
 
     # RUN
@@ -370,7 +370,7 @@ def main():
     run_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
 
     # STOP
-    stop_parser = subparsers.add_parser("stop", help="Stop the virtual lab")
+    stop_parser = subparsers.add_parser("stop", help="Stop the virtual cluster")
     stop_parser.add_argument("-r", "--rmi", help="Remove docker images", action="store_true")
 
     # SESSIONS
