@@ -8,9 +8,10 @@ import argparse
 import json
 import shutil
 import socket
+from pathlib import Path
 
-TEMP_DIRECTORY = "./temp"
-MEMO_FILE = f"{TEMP_DIRECTORY}/.cluster_session.json"
+TEMP_DIRECTORY = Path.home() / ".config/ansible-sample-conf"
+MEMO_FILE = f"{TEMP_DIRECTORY}/cluster_session.json"
 DOCKERFILES_DIRECTORY = "./Dockerfiles"
 
 os.makedirs(TEMP_DIRECTORY, exist_ok=True)
@@ -231,7 +232,7 @@ def start(inventory):
         sys.exit(1)
 
     print("Generating docker-compose.yml...")
-    session_inventory_path = f"temp/inventory-{sessionId}.yml"
+    session_inventory_path = f"{TEMP_DIRECTORY}/inventory-{sessionId}.yml"
 
     print("Generating session inventory...")
     generate_session_inventory(data, sessionId, session_inventory_path)
@@ -240,8 +241,7 @@ def start(inventory):
 
     docker_compose = generate_docker_compose(data, sessionId)
 
-
-    with open(f"temp/docker-compose-{sessionId}.yml", "w") as f:
+    with open(f"{TEMP_DIRECTORY}/docker-compose-{sessionId}.yml", "w") as f:
         yaml.dump(docker_compose, f, sort_keys=False)
 
     print("Starting containers...")
@@ -250,7 +250,7 @@ def start(inventory):
             [
                 "docker", "compose",
                 "-p", sessionId.lower(),
-                "-f", f"temp/docker-compose-{sessionId}.yml",
+                "-f", f"{TEMP_DIRECTORY}/docker-compose-{sessionId}.yml",
                 "up", "-d", "--build"
             ],
             check=True,
@@ -259,7 +259,6 @@ def start(inventory):
         )
     except subprocess.CalledProcessError:
         print("Error starting Docker containers")
-        shutil.rmtree("temp")
         sys.exit(1)
 
 def run(inventory, test_path, sessionId):
@@ -306,7 +305,7 @@ def stop(rmi):
             command = [
                 "docker", "compose",
                 "-p", s.lower(),
-                "-f", f"temp/docker-compose-{s}.yml",
+                "-f", f"{TEMP_DIRECTORY}/docker-compose-{s}.yml",
                 "down"
             ]
             if rmi:
