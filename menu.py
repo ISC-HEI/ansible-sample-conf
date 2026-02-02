@@ -8,7 +8,7 @@ import glob
 import readline
 from cluster import get_all_sessions
 
-LAB_SCRIPT = "cluster.py"
+CLUSTER_SCRIPT = "cluster.py"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
@@ -70,12 +70,12 @@ readline.parse_and_bind("tab: complete")
 
 # Commands
 
-def start_lab():
+def start_cluster():
     inventory = input(bold("Path to inventory file or directory: ")).strip()
     if inventory:
-        subprocess.run([sys.executable, LAB_SCRIPT, "start", "-i", inventory])
+        subprocess.run([sys.executable, CLUSTER_SCRIPT, "start", "-i", inventory])
 
-def run_lab():
+def run_cluster():
     inventory = input(bold("Inventory path (leave empty to reuse session inventory): ")).strip()
     test = input(bold("Playbook path (leave empty to ping hosts): ")).strip()
 
@@ -93,7 +93,7 @@ def run_lab():
         if not session:
             return
 
-    cmd = [sys.executable, LAB_SCRIPT, "run", "-s", session]
+    cmd = [sys.executable, CLUSTER_SCRIPT, "run", "-s", session]
 
     if inventory:
         cmd.extend(["-i", inventory])
@@ -102,31 +102,31 @@ def run_lab():
 
     subprocess.run(cmd)
 
-def stop_lab():
+def stop_cluster():
     rmi = input(bold("Remove docker images? (y/N): ")).strip().lower()
-    cmd = [sys.executable, LAB_SCRIPT, "stop"]
+    cmd = [sys.executable, CLUSTER_SCRIPT, "stop"]
     if rmi == "y":
         cmd.append("--rmi")
     subprocess.run(cmd)
 
 def show_sessions():
     verbose = input(bold("Verbose output? (y/N): ")).strip().lower()
-    cmd = [sys.executable, LAB_SCRIPT, "sessions"]
+    cmd = [sys.executable, CLUSTER_SCRIPT, "sessions"]
     if verbose == "y":
         cmd.append("--verbose")
     subprocess.run(cmd)
 
 def main():
     script_options = [
-        "Start - Start the virtual lab",
+        "Start - Start the virtual cluster",
         "Run - Run playbook or ping hosts",
-        "Stop - Stop the virtual lab",
+        "Stop - Stop the virtual cluster",
         "Sessions - Show all the active sessions",
         "Quit"
     ]
 
     terminal_menu = TerminalMenu(script_options,
-                                 title="Virtual Lab Manager",
+                                 title="Virtual Cluster Manager",
                                  menu_highlight_style=("bold",),
                                  menu_cursor_style=("fg_red", "bold")
                                  )
@@ -135,11 +135,11 @@ def main():
         choice = terminal_menu.show()
 
         if choice == 0:
-            start_lab()
+            start_cluster()
         elif choice == 1:
-            run_lab()
+            run_cluster()
         elif choice == 2:
-            stop_lab()
+            stop_cluster()
         elif choice == 3:
             show_sessions()
         elif choice == 4:
