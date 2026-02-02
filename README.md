@@ -64,9 +64,10 @@ Ansible Inventory
 
 The following tools are required:
 
-- Docker and Docker Compose
-- Python + venv
-- Ansible
+- `docker` and `docker-compose`
+  - Add `{ "userns-remap": "default" }` in `/etc/docker/daemon.json`
+- `python3` + `ven`
+- `ansible`
 
 
 ## Installation
