@@ -1,6 +1,6 @@
 <div align="center">
 
-# Ansible Lab Generator
+# Ansible virtual cluster generator
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![Ansible](https://img.shields.io/badge/Ansible-000000?style=for-the-badge&logo=ansible&logoColor=white)
@@ -8,23 +8,23 @@
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-Apache-red.svg?style=for-the-badge)
 
-Dynamically generate isolated Ansible test laboratories using Docker Compose,
+Dynamically generate isolated Ansible test clusters using Docker Compose,
 directly from an Ansible inventory.
 
 This project is designed to safely validate Ansible playbooks without impacting
-the local machine or real infrastructure.
+the real infrastructure.
 
 </div>
 
 
 ## Overview
 
-This tool converts an Ansible inventory into a fully isolated Docker-based lab:
+This tool converts an Ansible inventory into a fully isolated Docker-based cluster:
 
 - Each Ansible host is mapped to a Docker container
 - SSH access is preserved
 - Port conflicts are avoided using session-based offsets
-- Multiple labs can run in parallel
+- Multiple clusters can run in parallel
 - No modification is made to the host system
 
 It is especially useful for testing playbooks such as:
@@ -34,19 +34,19 @@ https://github.com/ISC-HEI/ansible-playbooks
 ## Key Features
 
 - Infrastructure-as-Inventory  
-  The Ansible inventory defines the entire lab topology.
+  The Ansible inventory defines the entire cluster topology.
 
 - Session-based isolation  
-  Each lab runs in its own session (S01, S02, …).
+  Each cluster runs in its own session (S01, S02, …).
 
 - Automatic Docker Compose generation  
   No manual Docker configuration is required.
 
 - Playbook execution  
-  Run ansible ping or full playbooks against the lab.
+  Run Ansible ping or full playbooks against the cluster.
 
 - Clean lifecycle  
-  Start, test, and destroy labs cleanly.
+  Start, test, and destroy clusters cleanly.
 
 - Menu for easy utilisation.
 
@@ -104,7 +104,7 @@ pip install -r requirements.txt
 
 This repo provied a menu for easy utilisation, start it like that:
 ```bash
-lab_menu.py
+menu.py
 ```
 
 ### CLI Commands
