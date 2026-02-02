@@ -8,7 +8,7 @@ import glob
 import readline
 from cluster import get_all_sessions
 
-LAB_SCRIPT = "test_lab.py"
+LAB_SCRIPT = "cluster.py"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
