@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from simple_term_menu import TerminalMenu
 import subprocess
 import os

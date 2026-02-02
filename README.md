@@ -104,14 +104,14 @@ pip install -r requirements.txt
 
 This repo provied a menu for easy utilisation, start it like that:
 ```bash
-python3 lab_menu.py
+lab_menu.py
 ```
 
 ### CLI Commands
 The entry point for CLI commands is:
 
 ```bash
-python3 test_lab.py
+test_lab.py
 ```
 
 
@@ -120,7 +120,7 @@ python3 test_lab.py
 Create a new isolated lab session from an Ansible inventory:
 
 ```bash
-python3 test_lab.py start -i inventory/inventory.yml
+test_lab.py start -i inventory/inventory.yml
 ```
 
 This will:
@@ -135,19 +135,19 @@ This will:
 Ping all hosts in the active session:
 
 ```bash
-python3 test_lab.py run
+test_lab.py run
 ```
 
 Run a specific playbook:
 
 ```bash
-python3 test_lab.py run -t path/to/playbook.yml
+test_lab.py run -t path/to/playbook.yml
 ```
 
 If multiple sessions exist, specify one:
 
 ```bash
-python3 test_lab.py run -s S02
+test_lab.py run -s S02
 ```
 
 
@@ -156,13 +156,13 @@ python3 test_lab.py run -s S02
 Show all active sessions:
 
 ```bash
-python3 test_lab.py sessions
+test_lab.py sessions
 ```
 
 Verbose mode:
 
 ```bash
-python3 test_lab.py sessions -v
+test_lab.py sessions -v
 ```
 
 
@@ -171,23 +171,23 @@ python3 test_lab.py sessions -v
 Stop all running labs:
 
 ```bash
-python3 test_lab.py stop
+test_lab.py stop
 ```
 
 Stop labs and remove Docker images:
 
 ```bash
-python3 test_lab.py stop --rmi
+test_lab.py stop --rmi
 ```
 
 
 ## Example Workflow
 
 ```bash
-python3 test_lab.py start -i inventory/inventory.yml
-python3 test_lab.py run
-python3 test_lab.py run -t playbooks/site.yml
-python3 test_lab.py stop
+test_lab.py start -i inventory/inventory.yml
+test_lab.py run
+test_lab.py run -t playbooks/site.yml
+test_lab.py stop
 ```
 
 
