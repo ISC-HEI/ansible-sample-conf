@@ -10,7 +10,7 @@ test_inv:
     ansible_python_interpreter: /usr/bin/python3
     ansible_host_key_checking: false
     ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-    dockerfile: Ubuntu_24.04
+    dockerfile: custom_ubuntu_24_04
     mailer:
       server: smtp.gmail.com
       user: email@gmail.com
@@ -23,6 +23,7 @@ test_inv:
           ansible_host: 127.0.0.1
           ansible_port: 2221
         srv-ubuntu-02:
+          dockerfile: custom_ubuntu_22_04
           ansible_host: 127.0.0.1
           ansible_port: 2222
         srv-ubuntu-03:

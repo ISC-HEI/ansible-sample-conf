@@ -1,0 +1,26 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    sudo \
+    openssh-server \
+    python3 \
+    python3-apt \
+    iputils-ping \
+    vim \
+    tzdata \
+    unattended-upgrades \
+    fwupd \
+    logrotate \
+    rsyslog \
+    uuid-runtime \
+    systemd
+#  rm -rf /var/lib/apt/lists/* will break ansible.builtin.apt cache_valid_time
+
+RUN echo useradd -m -s /bin/bash ubuntu && \
+  echo 'ubuntu:password' | chpasswd && \
+  adduser ubuntu sudo && \
+  echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+EXPOSE 22
+
+CMD ["/sbin/init"]
