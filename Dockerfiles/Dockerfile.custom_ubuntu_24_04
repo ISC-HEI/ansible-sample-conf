@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     logrotate \
     rsyslog \
     uuid-runtime \
-    systemd
+    systemd cron
 #  rm -rf /var/lib/apt/lists/* will break ansible.builtin.apt cache_valid_time
 
 RUN echo useradd -m -s /bin/bash ubuntu && \
