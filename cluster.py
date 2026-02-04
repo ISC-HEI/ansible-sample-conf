@@ -47,25 +47,46 @@ def load_inventory(path_or_file):
     return data
 
 def generate_docker_compose(data, sessionId):
-    """Generate docker-compose.yml dictionary from inventory data."""
+    """Generate docker-compose.yml dictionary from inventory data with dynamic subnet."""
     docker_compose = {"services": {}}
     root = data.get("test_inv", data)
     vars = root.get("vars", {})
-    dockerfileVersion = vars.get("dockerfile")
+    dockerfile = vars.get("dockerfile")
     children = root.get("children", {})
 
+    try:
+        session_num = int(sessionId[1:])
+    except ValueError:
+        session_num = 0
+    
+    subnet_prefix = f"172.{19 + session_num}" 
+    
+    host_ip_map = {}
+    ip_counter = 2
+    for group in children.values():
+        for host in group.get("hosts", {}).keys():
+            host_ip_map[host] = f"{subnet_prefix}.0.{ip_counter}"
+            ip_counter += 1
+
+    all_extra_hosts = [f"{name}:{ip}" for name, ip in host_ip_map.items()]
+    
     for group in children.values():
         for host, host_vars in group.get("hosts", {}).items():
-            docker_image = host_vars.get("dockerfile") or dockerfileVersion.lower()
+            assigned_ip = host_ip_map[host]
+            docker_image = (host_vars.get("dockerfile") if host_vars else None) or dockerfile
             create_docker_images(docker_image, sessionId)
 
             service_config = {
                 "image": f"{docker_image}:latest",
                 "container_name": f"{sessionId}-{host}",
-                "hostname": f"{host}",
-                "extra_hosts": [f"{host}:127.0.0.1"],
+                "hostname": host,
+                "extra_hosts": [h for h in all_extra_hosts if not h.startswith(f"{host}:")],
                 "tmpfs": ["/run", "/run/lock"],
-                "networks": [f"{sessionId}-cluster-net"],
+                "networks": {
+                    f"{sessionId}-cluster-net": {
+                        "ipv4_address": assigned_ip
+                    }
+                },
                 "deploy": {
                     "resources": {
                         "limits": {"cpus": "1.0", "memory": "512M"}
@@ -73,17 +94,26 @@ def generate_docker_compose(data, sessionId):
                 },
             }
 
-            if host_vars.get("is_entry_point"):
-                port = host_vars.get("ansible_port")
-                if port:
-                    host_port = session_port_offset(port, sessionId)
-                    service_config["ports"] = [f"{host_port}:22"]
-                else:
-                    return NameError
+            if host_vars:
+                if host_vars.get("is_entry_point"):
+                    port = host_vars.get("ansible_port")
+                    update_session(sessionId, entryIp=assigned_ip)
+                    if port:
+                        host_port = session_port_offset(port, sessionId)
+                        service_config["ports"] = [f"{host_port}:22"]
+                    else:
+                        raise ValueError(f"Entry point {host} missing ansible_port")
 
             docker_compose["services"][host] = service_config
 
-    docker_compose["networks"] = {f"{sessionId}-cluster-net": {"driver": "bridge"}}
+    docker_compose["networks"] = {
+        f"{sessionId}-cluster-net": {
+            "driver": "bridge",
+            "ipam": {
+                "config": [{"subnet": f"{subnet_prefix}.0.0/24"}]
+            }
+        }
+    }
     return docker_compose
 
 def is_port_open(port):
@@ -95,19 +125,9 @@ def is_port_open(port):
 
 # docker images
 
-def create_docker_images(dockerfileversion, sessionId):
-    image_name = dockerfileversion.lower()
-
-    result = subprocess.run(
-        ["docker", "build", "-f", image_name],
-        capture_output=True,
-        text=True
-    )
-    if result.stdout.strip():
-        update_session(sessionId, newImage=image_name)
-        return
-
-    dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfileversion}")
+def create_docker_images(dockerfile, sessionId):
+    image_name = dockerfile
+    dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfile}")
 
     subprocess.run(
         ["docker", "build", "-t", image_name, "-f", dockerfile_path, "."],
@@ -152,16 +172,14 @@ def create_session(path):
 
     return new_session
 
-def update_session(sessionId, path=None, newImage=None):
+def update_session(sessionId, path=None, newImage=None, entryIp=None):
     sessions = get_all_sessions() or {}
+    session_data = sessions.get(sessionId, {"path": None, "image": [], "entryIp": "0.0.0.0"})
 
-    session_data = sessions.get(sessionId, {"path": None, "image": []})
-
-    if path is not None:
-        session_data["path"] = path
-    if newImage is not None:
-        if newImage not in session_data["image"]:
-            session_data["image"].append(newImage)
+    if path is not None: session_data["path"] = path
+    if entryIp is not None: session_data["entryIp"] = entryIp
+    if newImage is not None and newImage not in session_data["image"]:
+        session_data["image"].append(newImage)
 
     sessions[sessionId] = session_data
 
@@ -197,7 +215,7 @@ def generate_session_inventory(data, sessionId, output_path):
     jump_host_base_port = 22
     for group in root.get("children", {}).values():
             for host_name, host_vars in group.get("hosts", {}).items():
-                if host_vars.get("is_entry_point") is True:
+                if host_vars and host_vars.get("is_entry_point") is True:
                     jump_host_base_port = host_vars.get("ansible_port", 22)
                     break
     
@@ -213,19 +231,21 @@ def generate_session_inventory(data, sessionId, output_path):
         session_root["children"][group_name] = {"hosts": {}}
 
         for host, host_vars in group.get("hosts", {}).items():
-            new_vars = {**host_vars}
+            if host_vars:
+                new_vars = {**host_vars}
+            else:
+                new_vars = {}
 
-            if host_vars.get("is_entry_point"):
+            if host_vars and host_vars.get("is_entry_point"):
                 new_vars["ansible_host"] = "127.0.0.1"
                 new_vars["ansible_port"] = jump_port
+                new_vars["ansible_ssh_common_args"] = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
             else:
                 new_vars["ansible_host"] = host
                 new_vars["ansible_port"] = 22
-                proxy_cmd = (
-                    f"sshpass -p {ansible_pass} ssh -W %h:%p -q {ansible_user}@127.0.0.1 -p {jump_port} "
-                    f"-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-                )
-                new_vars["ansible_ssh_common_args"] = f"-o ProxyCommand='{proxy_cmd}'"
+
+                proxy_cmd = f"ssh -W %h:%p -q {ansible_user}@127.0.0.1 -p {jump_port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+                new_vars["ansible_ssh_common_args"] = f"-o ProxyCommand='sshpass -p {ansible_pass} {proxy_cmd}'"
 
             session_root["children"][group_name]["hosts"][host] = new_vars
 
@@ -255,14 +275,13 @@ def start(inventory):
         sys.exit(1)
 
     print("Generating docker-compose.yml...")
-    session_inventory_path = f"{TEMP_DIRECTORY}/inventory-{sessionId}.yml"
+    docker_compose = generate_docker_compose(data, sessionId)
 
     print("Generating session inventory...")
+    session_inventory_path = f"{TEMP_DIRECTORY}/inventory-{sessionId}.yml"
     generate_session_inventory(data, sessionId, session_inventory_path)
 
     update_session(sessionId, session_inventory_path)
-
-    docker_compose = generate_docker_compose(data, sessionId)
 
     with open(f"{TEMP_DIRECTORY}/docker-compose-{sessionId}.yml", "w") as f:
         yaml.dump(docker_compose, f, sort_keys=False)
