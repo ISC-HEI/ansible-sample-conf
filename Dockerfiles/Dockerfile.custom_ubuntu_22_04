@@ -16,10 +16,11 @@ RUN apt-get update && apt-get install -y \
     systemd cron
 #  rm -rf /var/lib/apt/lists/* will break ansible.builtin.apt cache_valid_time
 
-RUN echo useradd -m -s /bin/bash ubuntu && \
-  echo 'ubuntu:password' | chpasswd && \
-  adduser ubuntu sudo && \
-  echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN apt-get update && apt-get install -y sudo && \
+    useradd -m -s /bin/bash ubuntu && \
+    echo 'ubuntu:password' | chpasswd && \
+    adduser ubuntu sudo && \
+    echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 
 EXPOSE 22

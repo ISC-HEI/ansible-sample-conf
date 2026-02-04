@@ -21,20 +21,15 @@ test_inv:
       hosts:
         srv-ubuntu-01:
           ansible_host: 127.0.0.1
-          ansible_port: 2221
         srv-ubuntu-02:
           dockerfile: custom_ubuntu_22_04
           ansible_host: 127.0.0.1
-          ansible_port: 2222
         srv-ubuntu-03:
           ansible_host: 127.0.0.1
-          ansible_port: 2223
         srv-ubuntu-04:
           ansible_host: 127.0.0.1
-          ansible_port: 2224
         srv-ubuntu-05:
           ansible_host: 127.0.0.1
-          ansible_port: 2225
 
     temp:
       hosts:
@@ -43,3 +38,4 @@ test_inv:
           ansible_port: 2220
           usergroups: null
           users: null
+          is_entry_point: true

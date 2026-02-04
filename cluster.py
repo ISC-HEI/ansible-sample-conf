@@ -52,22 +52,18 @@ def generate_docker_compose(data, sessionId):
     root = data.get("test_inv", data)
     vars = root.get("vars", {})
     dockerfileVersion = vars.get("dockerfile")
-    create_docker_images(dockerfileVersion, sessionId)
     children = root.get("children", {})
 
     for group in children.values():
-        for host, vars in group.get("hosts", {}).items():
-            port = vars.get("ansible_port")
-            if not port:
-                continue
-            host_port = session_port_offset(port, sessionId)
+        for host, host_vars in group.get("hosts", {}).items():
+            docker_image = host_vars.get("dockerfile") or dockerfileVersion.lower()
+            create_docker_images(docker_image, sessionId)
 
-            docker_compose["services"][host] = {
-                "image": f"{dockerfileVersion.lower()}:latest",
+            service_config = {
+                "image": f"{docker_image}:latest",
                 "container_name": f"{sessionId}-{host}",
                 "hostname": f"{host}",
                 "extra_hosts": [f"{host}:127.0.0.1"],
-                "ports": [f"{host_port}:22"],
                 "tmpfs": ["/run", "/run/lock"],
                 "networks": [f"{sessionId}-cluster-net"],
                 "deploy": {
@@ -76,6 +72,16 @@ def generate_docker_compose(data, sessionId):
                     }
                 },
             }
+
+            if host_vars.get("is_entry_point"):
+                port = host_vars.get("ansible_port")
+                if port:
+                    host_port = session_port_offset(port, sessionId)
+                    service_config["ports"] = [f"{host_port}:22"]
+                else:
+                    return NameError
+
+            docker_compose["services"][host] = service_config
 
     docker_compose["networks"] = {f"{sessionId}-cluster-net": {"driver": "bridge"}}
     return docker_compose
@@ -92,15 +98,13 @@ def is_port_open(port):
 def create_docker_images(dockerfileversion, sessionId):
     image_name = dockerfileversion.lower()
 
-    print("Generating docker images...")
-
     result = subprocess.run(
         ["docker", "build", "-f", image_name],
         capture_output=True,
         text=True
     )
     if result.stdout.strip():
-        update_session(sessionId, image=image_name)
+        update_session(sessionId, newImage=image_name)
         return
 
     dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfileversion}")
@@ -112,13 +116,13 @@ def create_docker_images(dockerfileversion, sessionId):
         stderr=subprocess.DEVNULL
     )
 
-    update_session(sessionId, image=image_name)
+    update_session(sessionId, newImage=image_name)
 
 def clear_images():
     sessions = get_all_sessions() or {}
     for s, data in sessions.items():
-        image_name = data.get("image")
-        if image_name:
+        images = data.get("image")
+        for image_name in images:
             print(f"Removing image {image_name}")
             subprocess.run(["docker", "rmi", "-f", image_name], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
@@ -141,22 +145,23 @@ def create_session(path):
         next_number = 1
 
     new_session = f"S{next_number:02d}"
-    sessions[new_session] = {"path": path, "image": None}
+    sessions[new_session] = {"path": path, "image": []}
 
     with open(MEMO_FILE, "w") as f:
         json.dump(sessions, f)
 
     return new_session
 
-def update_session(sessionId, path=None, image=None):
+def update_session(sessionId, path=None, newImage=None):
     sessions = get_all_sessions() or {}
 
-    session_data = sessions.get(sessionId, {"path": None, "image": None})
+    session_data = sessions.get(sessionId, {"path": None, "image": []})
 
     if path is not None:
         session_data["path"] = path
-    if image is not None:
-        session_data["image"] = image
+    if newImage is not None:
+        if newImage not in session_data["image"]:
+            session_data["image"].append(newImage)
 
     sessions[sessionId] = session_data
 
@@ -186,25 +191,43 @@ def get_all_sessions():
 def generate_session_inventory(data, sessionId, output_path):
     root_name = "test_inv" if "test_inv" in data else None
     root = data[root_name] if root_name else data
+    vars_root = root.get("vars", {})
+    ansible_pass = vars_root.get("ansible_ssh_pass", "password")
+    
+    jump_host_base_port = 22
+    for group in root.get("children", {}).values():
+            for host_name, host_vars in group.get("hosts", {}).items():
+                if host_vars.get("is_entry_point") is True:
+                    jump_host_base_port = host_vars.get("ansible_port", 22)
+                    break
+    
+    jump_port = session_port_offset(jump_host_base_port, sessionId)
+    ansible_user = vars_root.get("ansible_user", "ubuntu")
 
     session_root = {
-        "vars": root.get("vars", {}),
+        "vars": {**vars_root},
         "children": {}
     }
 
     for group_name, group in root.get("children", {}).items():
         session_root["children"][group_name] = {"hosts": {}}
 
-        for host, vars in group.get("hosts", {}).items():
-            port = vars.get("ansible_port")
-            if not port:
-                continue
+        for host, host_vars in group.get("hosts", {}).items():
+            new_vars = {**host_vars}
 
-            session_root["children"][group_name]["hosts"][host] = {
-                **vars,
-                "ansible_host": "127.0.0.1",
-                "ansible_port": session_port_offset(port, sessionId),
-            }
+            if host_vars.get("is_entry_point"):
+                new_vars["ansible_host"] = "127.0.0.1"
+                new_vars["ansible_port"] = jump_port
+            else:
+                new_vars["ansible_host"] = host
+                new_vars["ansible_port"] = 22
+                proxy_cmd = (
+                    f"sshpass -p {ansible_pass} ssh -W %h:%p -q {ansible_user}@127.0.0.1 -p {jump_port} "
+                    f"-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+                )
+                new_vars["ansible_ssh_common_args"] = f"-o ProxyCommand='{proxy_cmd}'"
+
+            session_root["children"][group_name]["hosts"][host] = new_vars
 
     session_inventory = {root_name: session_root} if root_name else session_root
 
@@ -255,7 +278,6 @@ def start(inventory):
             ],
             check=True,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
         )
     except subprocess.CalledProcessError:
         print("Error starting Docker containers")
