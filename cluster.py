@@ -110,7 +110,7 @@ def generate_docker_compose(data, sessionId):
         f"{sessionId}-cluster-net": {
             "driver": "bridge",
             "ipam": {
-                "config": [{"subnet": f"{subnet_prefix}.0.0/24"}]
+                "config": [{"subnet": f"{subnet_prefix}.0.0/16"}]
             }
         }
     }
