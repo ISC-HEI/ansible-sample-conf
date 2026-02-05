@@ -126,6 +126,11 @@ def is_port_open(port):
     except:
         return False
 
+def path_exist(path):
+    if not Path(path).exists():
+        logging.error(f"Path {path} doesn't exist")
+        sys.exit(1)
+
 # logging
 
 def setup_logging(quiet=False, debug=0):
@@ -405,8 +410,11 @@ def main():
 
 
     if args.command == "start":
+        path_exist(INVENTORY)
         start(INVENTORY)
     elif args.command == "run":
+        if INVENTORY: path_exist(INVENTORY)
+        if TEST_PATH: path_exist(TEST_PATH)
         run(INVENTORY, TEST_PATH, sessionId)
     elif args.command == "stop":
         stop()
