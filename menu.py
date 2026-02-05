@@ -11,6 +11,7 @@ from cluster import get_all_sessions
 CLUSTER_SCRIPT = "cluster.py"
 BOLD = "\033[1m"
 RESET = "\033[0m"
+LOGGING_ARGS = ["-d", "0"]
 
 # Helpers
 def clear_screen():
@@ -68,12 +69,16 @@ readline.set_completer_delims(" \t\n")
 readline.set_completer(complete_path)
 readline.parse_and_bind("tab: complete")
 
+def run_cluster_command(command, extra_args=[]):
+    cmd = [sys.executable, "cluster.py"] + LOGGING_ARGS + [command] + extra_args
+    subprocess.run(cmd)
+
 # Commands
 
 def start_cluster():
     inventory = input(bold("Path to inventory file or directory: ")).strip()
     if inventory:
-        subprocess.run([sys.executable, CLUSTER_SCRIPT, "start", "-i", inventory])
+        run_cluster_command("start", ["-i", inventory])
 
 def run_cluster():
     inventory = input(bold("Inventory path (leave empty to reuse session inventory): ")).strip()
@@ -93,24 +98,57 @@ def run_cluster():
         if not session:
             return
 
-    cmd = [sys.executable, CLUSTER_SCRIPT, "run", "-s", session]
+    args = []
 
     if inventory:
-        cmd.extend(["-i", inventory])
+        args.extend(["-i", inventory])
     if test:
-        cmd.extend(["-t", test])
+        args.extend(["-t", test])
 
-    subprocess.run(cmd)
+    run_cluster_command("run", ["-s", session] + args)
 
 def stop_cluster():
-    subprocess.run([sys.executable, CLUSTER_SCRIPT, "stop"])
+    run_cluster_command("stop")
 
 def show_sessions():
     verbose = input(bold("Verbose output? (y/N): ")).strip().lower()
-    cmd = [sys.executable, CLUSTER_SCRIPT, "sessions"]
+    args = []
     if verbose == "y":
-        cmd.append("--verbose")
-    subprocess.run(cmd)
+        args.append("--verbose")
+    run_cluster_command("sessions", args)
+
+def choose_logging():
+    global LOGGING_ARGS
+
+    logging_options = [
+        "q - Only print errors",
+        "0 - Info",
+        "1 - Verbose",
+        "2 - Commands output"
+    ]
+
+    logging_args_map = [
+        ["-q"],
+        ["-d", "0"],
+        ["-d", "1"],
+        ["-d", "2"]
+    ]
+
+    try:
+        default_index = logging_args_map.index(LOGGING_ARGS)
+    except ValueError:
+        default_index = 1
+
+    menu = TerminalMenu(
+        logging_options,
+        title="Choose logging level (applied to all commands)",
+        menu_cursor_style=("fg_red", "bold"),
+        cursor_index=default_index
+    )
+    
+    choice = menu.show()
+    if choice is not None:
+        LOGGING_ARGS = logging_args_map[choice]
 
 def main():
     script_options = [
@@ -118,6 +156,7 @@ def main():
         "Run - Run playbook or ping hosts",
         "Stop - Stop the virtual cluster",
         "Sessions - Show all the active sessions",
+        "Logging - Configure logging level",
         "Quit"
     ]
 
@@ -139,6 +178,8 @@ def main():
         elif choice == 3:
             show_sessions()
         elif choice == 4:
+            choose_logging()
+        elif choice == 5:
             break
 
         input(bold("\nPress Enter to return to menu..."))
