@@ -156,7 +156,7 @@ def run_cmd(cmd):
 def create_docker_images(dockerfile, sessionId):
     image_name = dockerfile
     dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfile}")
-
+    logging.debug(f"Building docker image '{dockerfile}'")
     run_cmd(["docker", "build", "-t", image_name, "-f", dockerfile_path, "."])
 
     update_session(sessionId, newImage=image_name)
