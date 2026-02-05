@@ -1,27 +1,22 @@
 FROM ubuntu:22.04
 
-RUN apt-get update && apt-get install -y \
-    sudo \
-    openssh-server \
-    python3 \
-    python3-apt \
-    iputils-ping \
-    vim \
-    tzdata \
-    unattended-upgrades \
-    fwupd \
-    logrotate \
-    rsyslog \
-    uuid-runtime \
-    systemd cron
-#  rm -rf /var/lib/apt/lists/* will break ansible.builtin.apt cache_valid_time
+# Select the local mirror
+ARG UBUNTU_MIRROR=ch
 
-RUN apt-get update && apt-get install -y sudo && \
-    useradd -m -s /bin/bash ubuntu && \
+# Setup mirror
+RUN sed --in-place --regexp-extended "s/(\/\/)(archive\.ubuntu)/\1${UBUNTU_MIRROR}.\2/" /etc/apt/sources.list
+
+# Minimal setup required for ansible
+RUN apt-get update && apt-get install -y \
+        sudo openssh-server python3-apt
+
+        # don't remove apt cache, this will break ansible.builtin.apt cache_valid_time
+        # rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -s /bin/bash ubuntu && \
     echo 'ubuntu:password' | chpasswd && \
     adduser ubuntu sudo && \
     echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
 
 EXPOSE 22
 
