@@ -103,11 +103,7 @@ def run_cluster():
     subprocess.run(cmd)
 
 def stop_cluster():
-    rmi = input(bold("Remove docker images? (y/N): ")).strip().lower()
-    cmd = [sys.executable, CLUSTER_SCRIPT, "stop"]
-    if rmi == "y":
-        cmd.append("--rmi")
-    subprocess.run(cmd)
+    subprocess.run([sys.executable, CLUSTER_SCRIPT, "stop"])
 
 def show_sessions():
     verbose = input(bold("Verbose output? (y/N): ")).strip().lower()

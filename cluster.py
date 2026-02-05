@@ -159,16 +159,6 @@ def create_docker_images(dockerfile, sessionId):
     logging.debug(f"Building docker image '{dockerfile}'")
     run_cmd(["docker", "build", "-t", image_name, "-f", dockerfile_path, "."])
 
-    update_session(sessionId, newImage=image_name)
-
-def clear_images():
-    sessions = get_all_sessions() or {}
-    for s, data in sessions.items():
-        images = data.get("image")
-        for image_name in images:
-            logging.info(f"Removing image {image_name}")
-            run_cmd(["docker", "rmi", "-f", image_name])
-
 # session
 
 def create_session(path):
@@ -179,7 +169,7 @@ def create_session(path):
             try:
                 sessions = json.load(f)
             except json.JSONDecodeError:
-                sessions = []
+                sessions = {}
 
     if sessions:
         numbers = [int(s[1:]) for s in sessions if s.startswith("S") and s[1:].isdigit()]
@@ -188,21 +178,19 @@ def create_session(path):
         next_number = 1
 
     new_session = f"S{next_number:02d}"
-    sessions[new_session] = {"path": path, "image": []}
+    sessions[new_session] = {"path": path}
 
     with open(MEMO_FILE, "w") as f:
         json.dump(sessions, f)
 
     return new_session
 
-def update_session(sessionId, path=None, newImage=None, entryIp=None):
+def update_session(sessionId, path=None, entryIp=None):
     sessions = get_all_sessions() or {}
-    session_data = sessions.get(sessionId, {"path": None, "image": [], "entryIp": "0.0.0.0"})
+    session_data = sessions.get(sessionId, {"path": None, "entryIp": "0.0.0.0"})
 
     if path is not None: session_data["path"] = path
     if entryIp is not None: session_data["entryIp"] = entryIp
-    if newImage is not None and newImage not in session_data["image"]:
-        session_data["image"].append(newImage)
 
     sessions[sessionId] = session_data
 
@@ -354,12 +342,10 @@ def run(inventory, test_path, sessionId):
         logging.info(f"Pinging all hosts in inventory {inventory} (session {sessionId})...")
         subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
 
-def stop(rmi):
+def stop():
     sessions = get_all_sessions()
     if (sessions):
         for s in sessions:
-            if rmi:
-                clear_images()
             logging.info(f"Cleaning up session {s}")
             run_cmd([
                 "docker", "compose",
@@ -397,7 +383,6 @@ def main():
 
     # STOP
     stop_parser = subparsers.add_parser("stop", help="Stop the virtual cluster")
-    stop_parser.add_argument("-r", "--rmi", help="Remove docker images", action="store_true")
 
     # SESSIONS
     session_parser = subparsers.add_parser("sessions", help="Show all the active sessions")
@@ -424,7 +409,7 @@ def main():
     elif args.command == "run":
         run(INVENTORY, TEST_PATH, sessionId)
     elif args.command == "stop":
-        stop(args.rmi)
+        stop()
     elif args.command == "sessions":
         sessions(args.verbose)
 
