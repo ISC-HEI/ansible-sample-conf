@@ -8,15 +8,18 @@ import argparse
 import json
 import shutil
 import socket
+import logging
 from pathlib import Path
 
 TEMP_DIRECTORY = Path.home() / ".config/ansible-sample-conf"
 MEMO_FILE = f"{TEMP_DIRECTORY}/cluster_session.json"
 DOCKERFILES_DIRECTORY = "./Dockerfiles"
+DEBUG_LEVEL = 0
 
 os.makedirs(TEMP_DIRECTORY, exist_ok=True)
 
 # Helpers
+
 def load_inventory(path_or_file):
     """Load inventory from a YAML file or directory of YAML files, merging hosts."""
     data = {}
@@ -123,18 +126,38 @@ def is_port_open(port):
     except:
         return False
 
+# logging
+
+def setup_logging(quiet=False, debug=0):
+    if quiet:
+        level = logging.ERROR
+    elif debug >= 1:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+
+    logging.basicConfig(
+        level=level,
+        format="%(levelname)s: %(message)s"
+    )
+
+def run_cmd(cmd):
+    logging.debug(f"Running command: {' '.join(cmd)}")
+
+    return subprocess.run(
+        cmd,
+        check=True,
+        stdout=None if DEBUG_LEVEL >= 2 else subprocess.DEVNULL,
+        stderr=None if DEBUG_LEVEL >= 2 else subprocess.DEVNULL
+    )
+
 # docker images
 
 def create_docker_images(dockerfile, sessionId):
     image_name = dockerfile
     dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfile}")
 
-    subprocess.run(
-        ["docker", "build", "-t", image_name, "-f", dockerfile_path, "."],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    run_cmd(["docker", "build", "-t", image_name, "-f", dockerfile_path, "."])
 
     update_session(sessionId, newImage=image_name)
 
@@ -143,8 +166,8 @@ def clear_images():
     for s, data in sessions.items():
         images = data.get("image")
         for image_name in images:
-            print(f"Removing image {image_name}")
-            subprocess.run(["docker", "rmi", "-f", image_name], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+            logging.info(f"Removing image {image_name}")
+            run_cmd(["docker", "rmi", "-f", image_name])
 
 # session
 
@@ -263,21 +286,21 @@ def session_port_offset(base_port, sessionId):
 # Functions link to command
 
 def start(inventory):
-    print(f"Using inventory: {inventory}")
+    logging.debug(f"Using inventory: {inventory}")
     sessionId = create_session(inventory)
-    print(f"Your session id is {sessionId}")
+    logging.info(f"Your session id is {sessionId}")
 
-    print("Loading inventory...")
+    logging.debug("Loading inventory...")
     try:
         data = load_inventory(inventory)
-    except Exception as e:
-        print(f"Error reading inventory: {e}")
+    except Exception:
+        logging.exception("Error reading inventory")
         sys.exit(1)
 
-    print("Generating docker-compose.yml...")
+    logging.debug("Generating docker-compose.yml...")
     docker_compose = generate_docker_compose(data, sessionId)
 
-    print("Generating session inventory...")
+    logging.debug("Generating session inventory...")
     session_inventory_path = f"{TEMP_DIRECTORY}/inventory-{sessionId}.yml"
     generate_session_inventory(data, sessionId, session_inventory_path)
 
@@ -286,38 +309,34 @@ def start(inventory):
     with open(f"{TEMP_DIRECTORY}/docker-compose-{sessionId}.yml", "w") as f:
         yaml.dump(docker_compose, f, sort_keys=False)
 
-    print("Starting containers...")
+    logging.info("Starting containers...")
     try:
-        subprocess.run(
-            [
+        run_cmd([
                 "docker", "compose",
                 "-p", sessionId.lower(),
                 "-f", f"{TEMP_DIRECTORY}/docker-compose-{sessionId}.yml",
                 "up", "-d", "--build"
-            ],
-            check=True,
-            stdout=subprocess.DEVNULL,
-        )
+            ])
     except subprocess.CalledProcessError:
-        print("Error starting Docker containers")
+        logging.error("Error starting Docker containers")
         sys.exit(1)
 
 def run(inventory, test_path, sessionId):
     sessions = get_all_sessions()
 
     if not sessions:
-        print("Error: no active session found. Please start a session first.")
+        logging.error("Error: no active session found. Please start a session first.")
         sys.exit(1)
 
     if sessionId:
         if sessionId not in sessions:
-            print(f"Error: session {sessionId} does not exist")
+            logging.error(f"Error: session {sessionId} does not exist")
             sys.exit(1)
     else:
         if len(sessions) == 1:
             sessionId = next(iter(sessions))
         else:
-            print("Error: multiple sessions found, please specify one with -s")
+            logging.error("Error: multiple sessions found, please specify one with -s")
             sys.exit(1)
 
     if inventory:
@@ -325,41 +344,32 @@ def run(inventory, test_path, sessionId):
     else:
         inventory = sessions.get(sessionId)["path"]
         if not inventory:
-            print("Error: no inventory associated with this session")
+            logging.error("Error: no inventory associated with this session")
             sys.exit(1)
 
     if test_path:
-        print(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
-        subprocess.run(
-            ["ansible-playbook", "-i", inventory, test_path, "-e", "h=all"]
-        )
+        logging.info(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
+        subprocess.run(["ansible-playbook", "-i", inventory, test_path, "-e", "h=all"])
     else:
-        print(f"Pinging all hosts in inventory {inventory} (session {sessionId})...")
-        subprocess.run(
-            ["ansible", "all", "-m", "ping", "-i", inventory]
-        )
+        logging.info(f"Pinging all hosts in inventory {inventory} (session {sessionId})...")
+        subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
 
 def stop(rmi):
     sessions = get_all_sessions()
     if (sessions):
         for s in sessions:
-            command = [
+            if rmi:
+                clear_images()
+            logging.info(f"Cleaning up session {s}")
+            run_cmd([
                 "docker", "compose",
                 "-p", s.lower(),
                 "-f", f"{TEMP_DIRECTORY}/docker-compose-{s}.yml",
                 "down"
-            ]
-            if rmi:
-                clear_images()
-            print(f"Cleaning up session {s}")
-            subprocess.run(
-                command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            ])
+        logging.debug("Removing temp directory")
         shutil.rmtree(TEMP_DIRECTORY)
-        print("Done.")
-
+        
 def sessions(verbose):
     sessions = get_all_sessions()
     if (sessions):
@@ -393,12 +403,20 @@ def main():
     session_parser = subparsers.add_parser("sessions", help="Show all the active sessions")
     session_parser.add_argument("-v", "--verbose", help="Show all the infos about a session", action="store_true")
 
+    # LOGGING
+    parser.add_argument("-q", "--quiet", help="Only print errors", action="store_true")
+    parser.add_argument("-d", "--debug", type=int, default=0, metavar="N", help="Debug level (0=info, 1=verbose, 2=commands output)")
+
     args = parser.parse_args()
 
     global INVENTORY, TEST_PATH
     INVENTORY = getattr(args, "inventory", None)
     TEST_PATH = getattr(args, "test", None)
     sessionId = getattr(args, "session", None)
+
+    global DEBUG_LEVEL
+    DEBUG_LEVEL = args.debug
+    setup_logging(args.quiet, args.debug)
 
 
     if args.command == "start":
@@ -409,7 +427,6 @@ def main():
         stop(args.rmi)
     elif args.command == "sessions":
         sessions(args.verbose)
-
 
 if __name__ == "__main__":
     main()
