@@ -9,13 +9,12 @@ test_inv:
     syslog_server: srv-ubuntu-main
     ansible_python_interpreter: /usr/bin/python3
     ansible_host_key_checking: false
-    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
     dockerfile: custom_ubuntu_24_04
     mailer:
-      server: smtp.gmail.com
-      user: email@gmail.com
+      server: smtp.example.com
+      user: email@example.com
       password: aaaa bbbb cccc dddd
-      dest: dest@gmail.com
+      dest: dest@example.com
   children:
     workers:
       hosts:
