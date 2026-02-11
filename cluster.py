@@ -398,29 +398,32 @@ def sessions(verbose):
 # Main function
 
 def main():
-    parser = argparse.ArgumentParser(description="Manage virtual cluster with Docker + Ansible")
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument("-q", "--quiet", help="Only print errors", action="store_true")
+    parent_parser.add_argument("-d", "--debug", type=int, default=0, metavar="N", help="Debug level (0=info, 1=verbose, 2=commands output)")
+
+    parser = argparse.ArgumentParser(
+        description="Manage virtual cluster with Docker + Ansible",
+        parents=[parent_parser]
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # START
-    start_parser = subparsers.add_parser("start", help="Start the virtual cluster")
+    start_parser = subparsers.add_parser("start", help="Start the virtual cluster", parents=[parent_parser])
     start_parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
 
     # RUN
-    run_parser = subparsers.add_parser("run", help="Run playbook or ping hosts")
+    run_parser = subparsers.add_parser("run", help="Run playbook or ping hosts", parents=[parent_parser])
     run_parser.add_argument("-t", "--test", help="Optional playbook path")
     run_parser.add_argument("-i", "--inventory", help="Inventory YAML file or directory path")
     run_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
 
     # STOP
-    stop_parser = subparsers.add_parser("stop", help="Stop the virtual cluster")
+    subparsers.add_parser("stop", help="Stop the virtual cluster", parents=[parent_parser])
 
     # SESSIONS
     session_parser = subparsers.add_parser("sessions", help="Show all the active sessions")
     session_parser.add_argument("-v", "--verbose", help="Show all the infos about a session", action="store_true")
-
-    # LOGGING
-    parser.add_argument("-q", "--quiet", help="Only print errors", action="store_true")
-    parser.add_argument("-d", "--debug", type=int, default=0, metavar="N", help="Debug level (0=info, 1=verbose, 2=commands output)")
 
     args = parser.parse_args()
 
