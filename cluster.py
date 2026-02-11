@@ -56,6 +56,7 @@ def generate_docker_compose(data, sessionId):
     vars = root.get("vars", {})
     dockerfile = vars.get("dockerfile")
     children = root.get("children", {})
+    built_images = set()
 
     try:
         session_num = int(sessionId[1:])
@@ -77,7 +78,10 @@ def generate_docker_compose(data, sessionId):
         for host, host_vars in group.get("hosts", {}).items():
             assigned_ip = host_ip_map[host]
             docker_image = (host_vars.get("dockerfile") if host_vars else None) or dockerfile
-            create_docker_images(docker_image, sessionId)
+            
+            if docker_image and docker_image not in built_images:
+                create_docker_images(docker_image, sessionId)
+                built_images.add(docker_image)
 
             service_config = {
                 "image": f"{docker_image}:latest",
