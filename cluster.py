@@ -131,6 +131,27 @@ def path_exist(path):
         logging.error(f"Path {path} doesn't exist")
         sys.exit(1)
 
+def check_dependencies():
+    logging.info("Checking dependencies...")
+    dependencies = ["docker", "sshpass", "ansible-playbook"]
+    missing = []
+
+    for tool in dependencies:
+        logging.debug(f"Checking for {tool}.")
+        if shutil.which(tool) is None:
+            missing.append(tool)
+    
+    if "docker" not in missing:
+        logging.debug("Checking for docker compose.")
+        result = subprocess.run(["docker", "compose", "version"], capture_output=True)
+        if result.returncode != 0:
+            missing.append("docker compose (plugin)")
+
+    if missing:
+        logging.error(f"Missing dependencies: {', '.join(missing)}")
+        logging.error("Please install the missing tools before running this script.")
+        sys.exit(1)
+
 # logging
 
 def setup_logging(quiet=False, debug=0):
@@ -408,6 +429,7 @@ def main():
     DEBUG_LEVEL = args.debug
     setup_logging(args.quiet, args.debug)
 
+    check_dependencies()
 
     if args.command == "start":
         path_exist(INVENTORY)
