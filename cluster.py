@@ -78,7 +78,7 @@ def generate_docker_compose(data, sessionId):
         for host, host_vars in group.get("hosts", {}).items():
             assigned_ip = host_ip_map[host]
             docker_image = (host_vars.get("dockerfile") if host_vars else None) or dockerfile
-            
+
             if docker_image and docker_image not in built_images:
                 create_docker_images(docker_image, sessionId)
                 built_images.add(docker_image)
@@ -186,7 +186,7 @@ def run_cmd(cmd):
 def create_docker_images(dockerfile, sessionId):
     image_name = dockerfile
     dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfile}")
-    logging.debug(f"Building docker image '{dockerfile}'")
+    logging.info(f"Building docker image '{dockerfile}'")
     run_cmd(["docker", "build", "-t", image_name, "-f", dockerfile_path, "."])
 
 # session
